@@ -12,9 +12,9 @@ mediaConfig.extMappings = [
 
 mediaConfig.rtpMappings = {};
 
-mediaConfig.rtpMappings.vp8 = {
+mediaConfig.rtpMappings.h264 = {
     payloadType: 100,
-    encodingName: 'VP8',
+    encodingName: 'H264',
     clockRate: 90000,
     channels: 1,
     mediaType: 'video',
