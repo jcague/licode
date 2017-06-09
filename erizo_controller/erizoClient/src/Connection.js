@@ -119,7 +119,7 @@ Erizo.GetUserMedia = function (config, callback, error) {
                   }
                   L.Logger.debug('Screen access on chrome stable, looking for extension');
                   try {
-                      chrome.runtime.sendMessage(extensionId, {getStream: true}, 
+                      chrome.runtime.sendMessage(extensionId, {getStream: true},
                         function (response){
                           var theConfig = {};
                           if (response === undefined){

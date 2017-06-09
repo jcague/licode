@@ -41,18 +41,18 @@ Erizo.FirefoxStack = function (spec) {
       that.peerConnection.getSenders().forEach(function(sender) {
         if (sender.track.kind === 'video') {
           sender.getParameters();
-          sender.setParameters({encodings: [{ 
-            rid: 'spam', 
-            active: true, 
-            priority: 'high', 
-            maxBitrate: 40000, 
-            maxHeight: 640, 
-            maxWidth: 480 },{ 
-            rid: 'egg', 
-            active: true, 
-            priority: 'medium', 
-            maxBitrate: 10000, 
-            maxHeight: 320, 
+          sender.setParameters({encodings: [{
+            rid: 'spam',
+            active: true,
+            priority: 'high',
+            maxBitrate: 40000,
+            maxHeight: 640,
+            maxWidth: 480 },{
+            rid: 'egg',
+            active: true,
+            priority: 'medium',
+            maxBitrate: 10000,
+            maxHeight: 320,
             maxWidth: 240 }]
           });
         }
@@ -137,6 +137,28 @@ Erizo.FirefoxStack = function (spec) {
         return sdp;
     };
 
+    var setH264 = function (sdp) {
+        var r, a, matchGroup;
+        var total = that.isSubscribe ? 1 : 2;
+        if (spec.video) {
+            matchGroup = sdp.match(/a=rtpmap:[0-9]* H264.*/g);
+            if (!matchGroup || (matchGroup.length <= 0)) {
+              return sdp;
+            }
+            var i = 1;
+            for (var line of matchGroup) {
+              if (i > total - 1) {
+                i--;
+                continue;
+              }
+              var matchLine = line.match(/a=rtpmap:([0-9]*) H264.*/);
+              var pt = matchLine[1];
+              sdp += 'a=fmtp:' + pt + ' level-asymmetry-allowed=1;packetization-mode=' + (i--) + ';profile-level-id=42e01f\r\n';
+            }
+        }
+        return sdp;
+    };
+
     var localDesc;
 
     var setLocalDesc = function (sessionDescription) {
@@ -194,6 +216,7 @@ Erizo.FirefoxStack = function (spec) {
     };
 
     that.createOffer = function (isSubscribe) {
+      that.isSubscribe = isSubscribe;
         if (isSubscribe === true) {
             that.peerConnection.createOffer(setLocalDesc, errorCallback, that.mediaConstraints);
         } else {
@@ -227,6 +250,7 @@ Erizo.FirefoxStack = function (spec) {
 
         if (msg.type === 'offer') {
             msg.sdp = setMaxBW(msg.sdp);
+            msg.sdp = setH264(msg.sdp);
             that.peerConnection.setRemoteDescription(new RTCSessionDescription(msg), function(){
                 that.peerConnection.createAnswer(setLocalDescp2p, function(error){
                 L.Logger.error('Error', error);
@@ -242,6 +266,7 @@ Erizo.FirefoxStack = function (spec) {
             L.Logger.debug('Remote Description to set', msg.sdp);
 
             msg.sdp = setMaxBW(msg.sdp);
+            msg.sdp = setH264(msg.sdp);
 
             that.peerConnection.setLocalDescription(localDesc, function(){
                 that.peerConnection.setRemoteDescription(

@@ -4,7 +4,7 @@ var Erizo = Erizo || {};
 
 Erizo.BowserStack = function (spec) {
     var that = {},
-        WebkitRTCPeerConnection = webkitRTCPeerConnection;
+        WebkitRTCPeerConnection = RTCPeerConnection;
 
     that.pcConfig = {
         'iceServers': []
@@ -139,11 +139,15 @@ Erizo.BowserStack = function (spec) {
     };
 
     that.createOffer = function (isSubscribe) {
-      if (isSubscribe===true)
-        that.peerConnection.createOffer(setLocalDesc, errorCallback, that.mediaConstraints);
-      else
+      if (isSubscribe===true) {
+        var audioReceiver = that.peerConnection.addTransceiver("audio");
+        var videoReceiver = that.peerConnection.addTransceiver("video");
+        audioReceiver.setDirection("recvonly");
+        videoReceiver.setDirection("recvonly");
         that.peerConnection.createOffer(setLocalDesc, errorCallback);
-
+      } else {
+        that.peerConnection.createOffer(setLocalDesc, errorCallback);
+      }
     };
 
     that.addStream = function (stream) {
