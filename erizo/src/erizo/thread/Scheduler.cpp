@@ -4,6 +4,7 @@
 
 #include <boost/bind.hpp>
 #include <utility>
+#include <iostream>
 
 
 Scheduler::Scheduler(int n_threads_servicing_queue)
@@ -29,9 +30,14 @@ void Scheduler::serviceQueue() {
         new_task_scheduled_.wait(lock);
       }
 
+      std::time_t now_c = std::chrono::system_clock::to_time_t(task_queue_.begin()->first);
+      std::cout << boost::this_thread::get_id() << " Waiting! " << std::put_time(std::localtime(&now_c), "%F %T") << std::endl;
+
       while (!stop_requested_ && !task_queue_.empty() &&
              new_task_scheduled_.wait_until(lock, task_queue_.begin()->first) != std::cv_status::timeout) {
+               std::cout << boost::this_thread::get_id() << " Waiting! " << std::endl;
       }
+      std::cout << boost::this_thread::get_id() << " Executing! " << stop_requested_ << task_queue_.empty() << std::endl;
       if (stop_requested_) {
         break;
       }
@@ -42,6 +48,7 @@ void Scheduler::serviceQueue() {
 
       Function f = task_queue_.begin()->second;
       task_queue_.erase(task_queue_.begin());
+      std::cout << boost::this_thread::get_id() << " Removed task from queue" << std::endl;
 
       lock.unlock();
       f();

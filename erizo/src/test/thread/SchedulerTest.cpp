@@ -48,12 +48,25 @@ class SchedulerTest : public ::testing::TestWithParam<int> {
 };
 
 TEST_P(SchedulerTest, execute_a_simple_task) {
-  counter_limit = 1;
+  counter_limit = 4;
   scheduleCounterIncrement(20);
 
-  auto reason = wait_until(100);
+  std::cout << "Added 1 task" << std::endl;
 
-  EXPECT_THAT(reason, Not(Eq(std::cv_status::timeout)));
+  std::cout << "Test starts waiting" << std::endl;
+  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+  std::cout << "Test stops waiting" << std::endl;
+
+  scheduleCounterIncrement(20);
+  scheduleCounterIncrement(20);
+  scheduleCounterIncrement(20);
+
+  std::cout << "Added 3 tasks" << std::endl;
+  std::cout << "Test starts waiting" << std::endl;
+  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+  std::cout << "Test stops waiting" << std::endl;
+
+  // EXPECT_THAT(reason, Not(Eq(std::cv_status::timeout)));
   EXPECT_THAT(counter, Eq(counter_limit));
 }
 
@@ -130,4 +143,4 @@ TEST_P(SchedulerTest, does_not_execute_tasks_when_stopped) {
 }
 
 INSTANTIATE_TEST_CASE_P(
-  TestWithMultipleThreads, SchedulerTest, testing::Values(1, 2, 3, 10));
+  TestWithMultipleThreads, SchedulerTest, testing::Values(2));
