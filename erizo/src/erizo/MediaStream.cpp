@@ -44,6 +44,7 @@ namespace erizo {
 DEFINE_LOGGER(MediaStream, "MediaStream");
 log4cxx::LoggerPtr MediaStream::statsLogger = log4cxx::Logger::getLogger("StreamStats");
 
+static constexpr auto kTimeToWaitToStartSendingPackets = std::chrono::seconds(2);
 static constexpr auto kStreamStatsPeriod = std::chrono::seconds(30);
 
 MediaStream::MediaStream(std::shared_ptr<Worker> worker,
@@ -90,7 +91,8 @@ MediaStream::MediaStream(std::shared_ptr<Worker> worker,
   mark_ = clock::now();
 
   rate_control_ = 0;
-  sending_ = true;
+  closed_ = false;
+  sending_ = false;
   ready_ = false;
 }
 
@@ -122,9 +124,10 @@ void MediaStream::setMaxVideoBW(uint32_t max_video_bw) {
 
 void MediaStream::syncClose() {
   ELOG_DEBUG("%s message:Close called", toLog());
-  if (!sending_) {
+  if (closed_) {
     return;
   }
+  closed_ = true;
   sending_ = false;
   ready_ = false;
   video_sink_ = nullptr;
@@ -160,10 +163,14 @@ bool MediaStream::isSinkSSRC(uint32_t ssrc) {
   return isVideoSinkSSRC(ssrc) || isAudioSinkSSRC(ssrc);
 }
 
+void MediaStream::initTimerToStartSending() {
+  remote_sdp_set_time_ = clock::now();
+}
+
 bool MediaStream::setRemoteSdp(std::shared_ptr<SdpInfo> sdp) {
   ELOG_DEBUG("%s message: setting remote SDP to Stream, sending: %d, initialized: %d",
     toLog(), sending_, pipeline_initialized_);
-  if (!sending_) {
+  if (closed_) {
     return true;
   }
 
@@ -192,6 +199,8 @@ bool MediaStream::setRemoteSdp(std::shared_ptr<SdpInfo> sdp) {
   }
 
   ready_ = true;
+
+  initTimerToStartSending();
 
   if (pipeline_initialized_ && pipeline_) {
     pipeline_->notifyUpdate();
@@ -601,6 +610,12 @@ void MediaStream::sendPLIToFeedback() {
 // changes the outgoing payload type for in the given data packet
 void MediaStream::sendPacketAsync(std::shared_ptr<DataPacket> packet) {
   if (!sending_) {
+    if (!closed_ && ready_) {
+      duration time_waiting = clock::now() - remote_sdp_set_time_;
+      if (time_waiting >= kTimeToWaitToStartSendingPackets) {
+        sending_ = true;
+      }
+    }
     return;
   }
   auto stream_ptr = shared_from_this();

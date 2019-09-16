@@ -181,6 +181,7 @@ class MediaStream: public MediaSink, public MediaSource, public FeedbackSink,
   void changeDeliverPayloadType(DataPacket *dp, packetType type);
   // parses incoming payload type, replaces occurence in buf
   uint32_t getRandomValue(uint32_t min, uint32_t max);
+  void initTimerToStartSending();
 
  private:
   boost::mutex event_listener_mutex_;
@@ -189,6 +190,7 @@ class MediaStream: public MediaSink, public MediaSource, public FeedbackSink,
   std::string stream_id_;
   std::string mslabel_;
   bool should_send_feedback_;
+  bool closed_;
   bool slide_show_mode_;
   bool sending_;
   bool ready_;
@@ -198,7 +200,7 @@ class MediaStream: public MediaSink, public MediaSource, public FeedbackSink,
 
   std::string stun_server_;
 
-  time_point now_, mark_;
+  time_point now_, mark_, remote_sdp_set_time_;
 
   std::shared_ptr<RtcpProcessor> rtcp_processor_;
   std::shared_ptr<Stats> stats_;
